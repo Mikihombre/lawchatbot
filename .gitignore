@@ -1,0 +1,31 @@
+# --- Wirtualne środowiska ---
+.venv/
+venv/
+env/
+
+# --- Pliki tymczasowe Pythona (będą się tworzyć same) ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Bazy danych i pliki lokalne (ChromaDB i inne) ---
+chroma_db/
+chroma/
+*.db
+*.sqlite3
+
+# --- Zmienne środowiskowe i klucze API (BARDZO WAŻNE!) ---
+# Nigdy nie wrzucaj kluczy OpenAI do repozytorium!
+.env
+.env.local
+
+# --- Logi i pliki systemowe ---
+*.log
+.DS_Store
+
+# --- Ustawienia edytorów (opcjonalnie, ale zalecane) ---
+.vscode/
+.idea/
+
+# --- Jeśli używasz Streamlit (widziałem go na liście) ---
+.streamlit/secrets.toml
