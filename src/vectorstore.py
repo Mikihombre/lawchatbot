@@ -5,7 +5,6 @@ from typing import List, Set, Tuple, Any, Optional
 
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 from src.config import (
@@ -14,6 +13,7 @@ from src.config import (
     EMBEDDING_MODEL,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
+    RETRIEVER_K
 )
 
 # ============================================================
@@ -156,14 +156,11 @@ def _load_json_files(docs_path: str, new_files: List[str]) -> List[Document]:
 #  MAIN
 # ============================================================
 
-def build_vector_store() -> Tuple[Chroma, Any]:
+def build_vector_store(embeddings) -> Tuple[Chroma, Any]:
     """
     Buduje lub aktualizuje bazę Chroma.
     """
-    embeddings = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        model_kwargs={"device": "cuda"},
-    )
+
 
     db: Optional[Chroma] = None
     existing_sources: Set[str] = set()
@@ -207,7 +204,7 @@ def build_vector_store() -> Tuple[Chroma, Any]:
 
         retriever = db.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 12},
+            search_kwargs={RETRIEVER_K},
         )
         return db, retriever
 
@@ -247,6 +244,6 @@ def build_vector_store() -> Tuple[Chroma, Any]:
 
     retriever = db.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 12},
+        search_kwargs={"k": RETRIEVER_K},
     )
     return db, retriever
