@@ -204,7 +204,7 @@ def build_vector_store(embeddings) -> Tuple[Chroma, Any]:
 
         retriever = db.as_retriever(
             search_type="similarity",
-            search_kwargs={RETRIEVER_K},
+            search_kwargs={"k": RETRIEVER_K},
         )
         return db, retriever
 
