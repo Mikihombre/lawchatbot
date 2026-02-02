@@ -1,17 +1,60 @@
 import streamlit as st
 from PIL import Image
-from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOllama
 
 from src.config import MODEL_NAME, SERVER_URL
 from src.embeddings import build_embeddings
 from src.vectorstore import build_vector_store
 from src.prompts import QA_PROMPT, DOCUMENT_PROMPT
 from src.rag_chain import build_rag_chain
-
+from src.routing_retriever import ActRoutingRetriever
+from src.config import RETRIEVER_K
 
 
 # ---------- Ustawienia strony ----------
 st.set_page_config(page_title="Chatbot Prawniczy", layout="wide")
+
+# ==========================================
+# STYLE CSS - FINALNA WERSJA (SYMETRIA)
+# ==========================================
+st.markdown(
+    """
+    <style>
+    /* 1. KONTENER GŁÓWNY */
+    [data-testid="stChatInput"] {
+        max-width: 800px;           /* Szerokość jak w ChatGPT */
+        margin-left: auto;          /* Centrowanie na ekranie */
+        margin-right: auto;
+        margin-bottom: 40px;        /* Podniesienie nad dolną krawędź */
+        
+        /* KLUCZOWE DLA SYMETRII: */
+        align-items: center !important; /* Wymusza, by wszystko w środku (ikony i tekst) było w jednej linii poziomej */
+        border-radius: 20px;        /* Zaokrąglenie całego paska */
+    }
+
+    /* 2. POLE TEKSTOWE (ŚRODEK) */
+    [data-testid="stChatInput"] textarea {
+        min-height: 55px !important;    /* Wysokość fizyczna paska */
+        padding-top: 16px !important;   /* Wypychanie tekstu, żeby był na środku wysokości */
+        padding-bottom: 16px !important;
+    }
+
+    /* 3. PRZYCISKI (IKONA PLIKU + IKONA WYSYŁANIA) */
+    /* Ten selektor łapie każdy guzik wewnątrz paska inputu */
+    [data-testid="stChatInput"] button {
+        align-self: center !important;  /* Centruje ikonę w pionie względem wysokiego paska */
+        margin-top: 0px !important;     /* Kasuje ewentualne domyślne przesunięcia Streamlit */
+        height: auto !important;
+    }
+    
+    /* Opcjonalnie: Jeśli ikona pliku jest zbyt blisko krawędzi, dodaj jej margines */
+    [data-testid="stChatInputFileUploader"] {
+        margin-left: 5px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.title("🤖 Chatbot Prawniczy")
 
 
@@ -24,32 +67,29 @@ if "rag_ready" not in st.session_state:
     st.session_state.rag_ready = False
 
 
-# ---------- Inicjalizacja LLM + RAG + reranker ----------
+# ---------- Inicjalizacja LLM + RAG  ----------
 @st.cache_resource(show_spinner=True)
 def init_rag():
-    llm = ChatOpenAI(
-        base_url=SERVER_URL,
-        api_key="not-needed",
-        model=MODEL_NAME,
+    llm = ChatOllama(
+        base_url=SERVER_URL,   # http://127.0.0.1:11434
+        model=MODEL_NAME,      # gemma3:27b-it-q4_K_M
         temperature=0.2,
-        request_timeout=120,
     )
 
     embeddings = build_embeddings()
-    db, retriever = build_vector_store()
+    db, retriever = build_vector_store(embeddings)
+    retriever = ActRoutingRetriever(vectorstore=db, k=RETRIEVER_K, max_acts=2, debug=True)
 
     # Tworzy: rag_chain (retriever+LLM) oraz combine_docs_chain (LLM na podanych docach)
     rag_chain = build_rag_chain(
         llm, retriever, QA_PROMPT, DOCUMENT_PROMPT
     )
 
-    #st.text("System RAG jest gotowy.")
-
-    return rag_chain,retriever
+    return rag_chain, retriever
 
 
 if not st.session_state.rag_ready:
-    rag_chain,retriever = init_rag()
+    rag_chain, retriever = init_rag()
     st.session_state.rag_chain = rag_chain
     st.session_state.retriever = retriever
     st.session_state.rag_ready = True
@@ -78,33 +118,26 @@ def run_rag_pipeline(user_query: str):
     rag_chain = st.session_state.rag_chain
     
     # Uruchamiamy łańcuch. 
-    # Dzięki 'create_retrieval_chain', on sam pobierze dokumenty (context) 
-    # na podstawie pytania (input).
     result = rag_chain.invoke({"input": user_query})
 
     # Wyciągamy odpowiedź
     answer = result.get("answer", "Brak odpowiedzi")
 
     # Wyciągamy dokumenty, które znalazł retriever
-    # (W 'create_retrieval_chain' są one zwracane pod kluczem "context")
     retrieved_docs = result.get("context", [])
 
-    # Zwracamy wynik.
-    # Uwaga: raw_docs i final_docs to teraz to samo, 
-    # bo usunęliśmy etap filtrowania (rerankera).
     return answer.strip(), retrieved_docs, retrieved_docs
 
 
 # ---------- Wyświetlanie historii chatu ----------
+# Jeśli chcesz, aby wiadomości też były węższe i na środku (jak w ChatGPT),
+# możesz odkomentować styl .stChatMessage w sekcji CSS powyżej.
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 
 # ---------- Nowa wiadomość użytkownika + załączniki przy input ----------
-# WYMAGA Streamlit >= 1.43 (accept_file/file_type w chat_input)
-
-# chat_input_value to teraz dict-like obiekt z .text i .files (zgodnie z docs)
 chat_value = st.chat_input(
     "Zadaj pytanie lub napisz polecenie...",
     accept_file="multiple",
@@ -136,25 +169,6 @@ if chat_value is not None:
             with st.spinner("Analizuję dokumenty..."):
                 answer_text, raw_docs, final_docs = run_rag_pipeline(user_text)
 
-                with st.expander("Informacje debugowe (retriever + reranker)", expanded=False):
-                    st.subheader("Krok 1: Surowe wyniki z bazy wektorowej (raw_docs)")
-                    for i, doc in enumerate(raw_docs):
-                        st.write(
-                            f"**Wynik [RAW] #{i}** "
-                            f"(Source: {doc.metadata.get('source')}, "
-                            f"Page: {doc.metadata.get('page')})"
-                        )
-                        st.text(f"{doc.page_content[:500]}...")
-
-                    st.subheader("Krok 2: Wyniki po Rerankingu Neuronowym (final_docs)")
-                    for i, doc in enumerate(final_docs):
-                        st.write(
-                            f"**Wynik [FINAL] #{i}** "
-                            f"(Source: {doc.metadata.get('source')}, "
-                            f"Page: {doc.metadata.get('page')})"
-                        )
-                        st.text(f"{doc.page_content[:500]}...")
-
                 st.markdown(answer_text)
 
                 st.markdown("**Źródła:**")
@@ -165,6 +179,25 @@ if chat_value is not None:
                         src = doc.metadata.get("source", "Nieznane źródło")
                         page = doc.metadata.get("page", "N/A")
                         st.write(f"- {src}, strona {page}")
+
+                with st.expander("Informacje debugowe (retriever)", expanded=False):
+                    st.subheader("Krok 1: Surowe wyniki z bazy wektorowej (raw_docs)")
+                    for i, doc in enumerate(raw_docs):
+                        st.write(
+                            f"**Wynik [RAW] #{i}** "
+                            f"(Source: {doc.metadata.get('source')}, "
+                            f"Page: {doc.metadata.get('page')})"
+                        )
+                        st.text(f"{doc.page_content[:500]}...")
+
+                    st.subheader("Krok 2: Wyniki końcowe(final_docs)")
+                    for i, doc in enumerate(final_docs):
+                        st.write(
+                            f"**Wynik [FINAL] #{i}** "
+                            f"(Source: {doc.metadata.get('source')}, "
+                            f"Page: {doc.metadata.get('page')})"
+                        )
+                        st.text(f"{doc.page_content[:500]}...")
 
         # 4) zapisz odpowiedź w historii
         st.session_state.messages.append(
