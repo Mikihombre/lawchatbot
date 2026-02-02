@@ -41,10 +41,15 @@ def init_rag():
 
     # Zamiast db.as_retriever() używamy Twojego routingu po aktach (metadata["act_name"])
     routed_retriever = ActRoutingRetriever(
-        vectorstore=db,
-        k=RETRIEVER_K,
-        max_acts=2,
-        debug=DEBUG,
+    vectorstore=db,
+    k=RETRIEVER_K,
+    max_acts=2,
+    debug=DEBUG,
+    search_type="mmr",
+    fetch_k=60,
+    lambda_mult=0.6,
+    enable_sanction_filter=True,
+    sanction_k=6,
     )
 
     rag_chain = build_rag_chain(

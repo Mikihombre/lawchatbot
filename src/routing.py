@@ -1,13 +1,15 @@
 # src/routing.py
 import re
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+
 
 @dataclass(frozen=True)
 class ActRoute:
     act_name: str                 # MUSI 1:1 odpowiadać metadata["act_name"] w Chroma
     aliases: Tuple[str, ...]
     priority: int = 0
+
 
 ACTS: List[ActRoute] = [
     # --- Procedury ---
@@ -67,13 +69,13 @@ ACTS: List[ActRoute] = [
     ),
     ActRoute(
         act_name="Kodeks wykroczeń",
-        aliases=("kodeks wykroczeń", "wykroczenie", "mandat", "areszt", "nagana", "grzywna"),
+        aliases=("kodeks wykroczeń", "wykroczenie", "mandat", "areszt", "nagana", "grzywna", "kw"),
         priority=95
     ),
     ActRoute(
         act_name="Kodeks pracy",
         aliases=("kodeks pracy", "stosunek pracy", "pracownik", "pracodawca", "umowa o pracę",
-                 "czas pracy", "urlop", "wynagrodzenie", "wypowiedzenie", "zwolnienie dyscyplinarne"),
+                 "czas pracy", "urlop", "wynagrodzenie", "wypowiedzenie", "zwolnienie dyscyplinarne", "kp"),
         priority=95
     ),
     ActRoute(
@@ -110,32 +112,61 @@ ACTS: List[ActRoute] = [
 
     # --- Konstytucja ---
     ActRoute(
-        act_name="Konstytucja Rzeczypospolitej Polskiej",  # sprawdź czy u Ciebie nie jest np. "Konstytucja Rzeczypospolitej Polskiej"
+        act_name="Konstytucja Rzeczypospolitej Polskiej",
         aliases=("konstytucja", "konstytucja rp", "sejm", "senat", "prezydent",
                  "trybunał konstytucyjny", "rzecznik praw obywatelskich", "wolności i prawa"),
         priority=85
     ),
 ]
 
+
 def is_cross_act(query: str) -> bool:
     q = query.lower()
     return any(x in q for x in ("porównaj", "różnica", "różnią się", "zestaw", "na tle", "zarówno", "a także"))
 
+
+# --- NOWE: heurystyka kwotowa (uniwersalna pod KW/KK próg 800) ---
+
+_THEFT_HINTS = ("kradzież", "kradnie", "przywłaszc", "zabiera", "włamaniem", "paserstwo")
+
+
+def _extract_amount_pln(query: str) -> Optional[int]:
+    q = query.lower().replace("\u00a0", " ")
+    m = re.search(r"(\d[\d\s]{0,10})\s*zł", q)
+    if not m:
+        return None
+    raw = m.group(1).replace(" ", "")
+    try:
+        return int(raw)
+    except Exception:
+        return None
+
+
 def route_act_names(query: str, max_acts: int = 2) -> List[str]:
     q = query.lower()
+
+    # 1) Najpierw heurystyka kwotowa dla typowych pytań o kradzież/przywłaszczenie
+    amount = _extract_amount_pln(query)
+    if amount is not None and any(h in q for h in _THEFT_HINTS):
+        # Jeśli kwota < 800 zł, KW musi być w grze (u Ciebie próg 800 wynika z KW 119 §1)
+        if amount < 800:
+            return ["Kodeks wykroczeń"] if max_acts == 1 else ["Kodeks wykroczeń", "Kodeks Karny"]
+        else:
+            return ["Kodeks Karny"] if max_acts == 1 else ["Kodeks Karny", "Kodeks wykroczeń"]
+
+    # 2) Standardowe routowanie na aliasach
     scored = []
     for act in ACTS:
         s = 0
         for a in act.aliases:
             if a in q:
                 s += 10 + min(len(a) // 7, 6)
-        # skróty jako osobne słowo (np. kpk/kpa/kc/kks)
-        # UWAGA: tu regexy pod kilka najczęstszych skrótów
+        # skróty jako osobne słowo (np. kpk/kpa/kc/kk/kw/kp)
         if re.search(r"\b(kpk|kpa|kpc|kc|kk|kks|kkw|kpw|kw|kp|ksh)\b", q) and any(
             re.search(rf"\b{re.escape(tok)}\b", q) for tok in ("kpk","kpa","kpc","kc","kk","kks","kkw","kpw","kw","kp","ksh")
         ):
-            # jeśli query ma skrót, to i tak aliasy go złapią; nie komplikuję dodatkowo
             pass
+
         if s > 0:
             s += act.priority
             scored.append((s, act.act_name))
