@@ -1,205 +1,174 @@
 import streamlit as st
 from PIL import Image
 from langchain_community.chat_models import ChatOllama
-
-from src.config import MODEL_NAME, SERVER_URL
+from langchain_core.messages import HumanMessage, AIMessage
+from src.routing_retriever import ActRoutingRetriever
+from src.config import MODEL_NAME, SERVER_URL, RETRIEVER_K
 from src.embeddings import build_embeddings
 from src.vectorstore import build_vector_store
 from src.prompts import QA_PROMPT, DOCUMENT_PROMPT
 from src.rag_chain import build_rag_chain
-from src.routing_retriever import ActRoutingRetriever
-from src.config import RETRIEVER_K
-
 
 # ---------- Ustawienia strony ----------
-st.set_page_config(page_title="Chatbot Prawniczy", layout="wide")
+st.set_page_config(
+    page_title="Asystent Prawny AI", 
+    page_icon="⚖️", 
+    layout="wide"
+)
 
-# ==========================================
-# STYLE CSS - FINALNA WERSJA (SYMETRIA)
-# ==========================================
+# ---------- Zaawansowany CSS (Efekty Hover i Layout) ----------
 st.markdown(
     """
     <style>
-    /* 1. KONTENER GŁÓWNY */
+    /* Kontener wejściowy chat_input */
     [data-testid="stChatInput"] {
-        max-width: 800px;           /* Szerokość jak w ChatGPT */
-        margin-left: auto;          /* Centrowanie na ekranie */
+        max-width: 850px;
+        margin-left: auto;
         margin-right: auto;
-        margin-bottom: 40px;        /* Podniesienie nad dolną krawędź */
-        
-        /* KLUCZOWE DLA SYMETRII: */
-        align-items: center !important; /* Wymusza, by wszystko w środku (ikony i tekst) było w jednej linii poziomej */
-        border-radius: 20px;        /* Zaokrąglenie całego paska */
+        margin-bottom: 40px;
+        border-radius: 20px;
+        border: 1px solid #e0e0e0;
     }
 
-    /* 2. POLE TEKSTOWE (ŚRODEK) */
-    [data-testid="stChatInput"] textarea {
-        min-height: 55px !important;    /* Wysokość fizyczna paska */
-        padding-top: 16px !important;   /* Wypychanie tekstu, żeby był na środku wysokości */
-        padding-bottom: 16px !important;
+    /* --- ANIMACJA IKONEK I KURSOR --- */
+    /* Celujemy w przycisk wysyłania i ikonę dodawania plików */
+    [data-testid="stChatInput"] button, 
+    [data-testid="stChatInput"] label[data-testid="stWidgetLabel"] {
+        transition: transform 0.2s ease-in-out !important;
+        cursor: pointer !important; /* <--- TUTAJ DODANO EFEKT POINTERA */
     }
 
-    /* 3. PRZYCISKI (IKONA PLIKU + IKONA WYSYŁANIA) */
-    /* Ten selektor łapie każdy guzik wewnątrz paska inputu */
-    [data-testid="stChatInput"] button {
-        align-self: center !important;  /* Centruje ikonę w pionie względem wysokiego paska */
-        margin-top: 0px !important;     /* Kasuje ewentualne domyślne przesunięcia Streamlit */
-        height: auto !important;
+    /* Powiększenie przycisku wyślij po najechaniu */
+    [data-testid="stChatInput"] button:hover {
+        transform: scale(1.18) !important;
     }
-    
-    /* Opcjonalnie: Jeśli ikona pliku jest zbyt blisko krawędzi, dodaj jej margines */
-    [data-testid="stChatInputFileUploader"] {
-        margin-left: 5px !important;
+
+    /* Powiększenie ikony plusa (upload) po najechaniu */
+    [data-testid="stChatInput"] label:hover {
+        transform: scale(1.18) !important;
+    }
+
+    /* Styl dla źródeł prawnych */
+    .source-box {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #ff4b4b;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Marginesy głównego kontenera */
+    .block-container {
+        padding-top: 2rem;
+        max-width: 900px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
-st.title("🤖 Chatbot Prawniczy")
 
-
-# ---------- Stan sesji (historia chatu + RAG) ----------
+# ---------- Stan sesji ----------
 if "messages" not in st.session_state:
-    # [{"role": "user"/"assistant", "content": str}]
     st.session_state.messages = []
 
 if "rag_ready" not in st.session_state:
     st.session_state.rag_ready = False
 
-
-# ---------- Inicjalizacja LLM + RAG  ----------
+# ---------- Inicjalizacja RAG (Bez zmian w logice) ----------
 @st.cache_resource(show_spinner=True)
 def init_rag():
     llm = ChatOllama(
-        base_url=SERVER_URL,   # http://127.0.0.1:11434
-        model=MODEL_NAME,      # gemma3:27b-it-q4_K_M
+        base_url=SERVER_URL,
+        model=MODEL_NAME,
         temperature=0.2,
     )
-
     embeddings = build_embeddings()
-    db, retriever = build_vector_store(embeddings)
-    retriever = ActRoutingRetriever(vectorstore=db, k=RETRIEVER_K, max_acts=2, debug=True)
+    db, _ = build_vector_store(embeddings)
 
-    # Tworzy: rag_chain (retriever+LLM) oraz combine_docs_chain (LLM na podanych docach)
-    rag_chain = build_rag_chain(
-        llm, retriever, QA_PROMPT, DOCUMENT_PROMPT
+    retriever = ActRoutingRetriever(
+        vectorstore=db,
+        k=RETRIEVER_K,
+        max_acts=2,
+        debug=True,
+        search_type="mmr",
+        fetch_k=60,
+        lambda_mult=0.6,
+        enable_sanction_filter=True,
+        sanction_k=6,
     )
 
+    rag_chain = build_rag_chain(llm, retriever, QA_PROMPT, DOCUMENT_PROMPT)
     return rag_chain, retriever
 
-
 if not st.session_state.rag_ready:
-    rag_chain, retriever = init_rag()
-    st.session_state.rag_chain = rag_chain
-    st.session_state.retriever = retriever
-    st.session_state.rag_ready = True
-else:
-    rag_chain = st.session_state.rag_chain
-    retriever = st.session_state.retriever
+    with st.spinner("🚀 Inicjalizacja bazy przepisów..."):
+        rag_chain, retriever = init_rag()
+        st.session_state.rag_chain = rag_chain
+        st.session_state.retriever = retriever
+        st.session_state.rag_ready = True
 
+# ---------- Ekran Główny ----------
 
-# ---------- Placeholder na tekst z załączonych plików ----------
-def extract_text_from_files(files) -> str:
-    """
-    TODO:
-      - dla PDF: dodać wyciąganie tekstu (PyMuPDF / pdfplumber)
-      - dla obrazów: dodać OCR (pytesseract, lang='pol')
-    Teraz tylko wypisujemy nazwy plików jako 'treść wniosku'.
-    """
-    if not files:
-        return ""
-    lines = [f"[plik] {f.name}" for f in files]
-    return "\n".join(lines)
+st.title("⚖️ Asystent Prawny AI")
+st.markdown("Skonsultuj problem prawny w oparciu o aktualne kodeksy.")
 
+# ---------- Wyświetlanie Historii ----------
+if not st.session_state.messages:
+    st.write("")
+    st.info("Zadaj pytanie, aby rozpocząć analizę. Możesz przeciągnąć dokumenty bezpośrednio do pola tekstowego.")
 
-# ---------- Pipeline RAG dla jednego pytania ----------
-def run_rag_pipeline(user_query: str):
-    # Pobieramy gotowy łańcuch z sesji
-    rag_chain = st.session_state.rag_chain
-    
-    # Uruchamiamy łańcuch. 
-    result = rag_chain.invoke({"input": user_query})
-
-    # Wyciągamy odpowiedź
-    answer = result.get("answer", "Brak odpowiedzi")
-
-    # Wyciągamy dokumenty, które znalazł retriever
-    retrieved_docs = result.get("context", [])
-
-    return answer.strip(), retrieved_docs, retrieved_docs
-
-
-# ---------- Wyświetlanie historii chatu ----------
-# Jeśli chcesz, aby wiadomości też były węższe i na środku (jak w ChatGPT),
-# możesz odkomentować styl .stChatMessage w sekcji CSS powyżej.
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+    avatar = "👤" if msg["role"] == "user" else "⚖️"
+    with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
 
+# ---------- Logika RAG ----------
+def run_rag_pipeline(user_query: str):
+    rag_chain = st.session_state.rag_chain
+    result = rag_chain.invoke({"input": user_query}) 
+    return result.get("answer", ""), result.get("context", [])
 
-# ---------- Nowa wiadomość użytkownika + załączniki przy input ----------
+# ---------- INPUT ----------
 chat_value = st.chat_input(
-    "Zadaj pytanie lub napisz polecenie...",
+    "Napisz pytanie lub załącz pliki...",
     accept_file="multiple",
-    file_type=["pdf", "png", "jpg", "jpeg"],
+    file_type=["pdf", "png", "jpg"]
 )
 
-if chat_value is not None:
-    # chat_value to obiekt ChatInputValue: ma .text i .files
+if chat_value:
     user_text = chat_value.text or ""
     user_files = chat_value.files or []
 
-    # jeśli jest jakikolwiek tekst albo pliki, to działamy
     if user_text.strip() or user_files:
-        # 1) dopisz wiadomość użytkownika do historii
-        st.session_state.messages.append(
-            {"role": "user", "content": user_text}
-        )
-        with st.chat_message("user"):
-            st.markdown(user_text if user_text.strip() else "[wiadomość z załącznikami]")
+        # 1. User Message
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(user_text)
 
-        # 2) prosty „wniosek” z plików (na razie tylko nazwy)
-        wniosek_text = extract_text_from_files(user_files)
-        if wniosek_text:
-            with st.expander("Załączone pliki (do analizy wniosku)"):
-                st.text(wniosek_text)
+        # 2. AI Response
+        with st.chat_message("assistant", avatar="⚖️"):
+            message_placeholder = st.empty()
+            with st.spinner("⚖️ Analizuję treść aktów prawnych..."):
+                answer_text, final_docs = run_rag_pipeline(user_text)
+                message_placeholder.markdown(answer_text)
+                
+                if final_docs:
+                    with st.expander("📚 Wykorzystane źródła"):
+                        for doc in final_docs:
+                            src = doc.metadata.get("source", "Dokument").split("/")[-1]
+                            act = doc.metadata.get("act_name", "Przepis")
+                            st.markdown(
+                                f"""
+                                <div class="source-box">
+                                    <strong>{act}</strong> <small>({src})</small><br>
+                                    <p style="font-size: 0.85rem; color: #444; margin-top: 8px;">
+                                    "{doc.page_content[:350]}..."
+                                    </p>
+                                </div>
+                                """, 
+                                unsafe_allow_html=True
+                            )
 
-        # 3) RAG + debug + odpowiedź
-        with st.chat_message("assistant"):
-            with st.spinner("Analizuję dokumenty..."):
-                answer_text, raw_docs, final_docs = run_rag_pipeline(user_text)
-
-                st.markdown(answer_text)
-
-                st.markdown("**Źródła:**")
-                if not final_docs:
-                    st.write("- Brak źródeł.")
-                else:
-                    for doc in final_docs:
-                        src = doc.metadata.get("source", "Nieznane źródło")
-                        page = doc.metadata.get("page", "N/A")
-                        st.write(f"- {src}, strona {page}")
-
-                with st.expander("Informacje debugowe (retriever)", expanded=False):
-                    st.subheader("Krok 1: Surowe wyniki z bazy wektorowej (raw_docs)")
-                    for i, doc in enumerate(raw_docs):
-                        st.write(
-                            f"**Wynik [RAW] #{i}** "
-                            f"(Source: {doc.metadata.get('source')}, "
-                            f"Page: {doc.metadata.get('page')})"
-                        )
-                        st.text(f"{doc.page_content[:500]}...")
-
-                    st.subheader("Krok 2: Wyniki końcowe(final_docs)")
-                    for i, doc in enumerate(final_docs):
-                        st.write(
-                            f"**Wynik [FINAL] #{i}** "
-                            f"(Source: {doc.metadata.get('source')}, "
-                            f"Page: {doc.metadata.get('page')})"
-                        )
-                        st.text(f"{doc.page_content[:500]}...")
-
-        # 4) zapisz odpowiedź w historii
-        st.session_state.messages.append(
-            {"role": "assistant", "content": answer_text}
-        )
+        # 3. Save History
+        st.session_state.messages.append({"role": "assistant", "content": answer_text})
