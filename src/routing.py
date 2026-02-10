@@ -1,180 +1,126 @@
 # src/routing.py
 import re
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
-
-@dataclass(frozen=True)
+# Prosta klasa do przechowywania reguł
 class ActRoute:
-    act_name: str                 # MUSI 1:1 odpowiadać metadata["act_name"] w Chroma
-    aliases: Tuple[str, ...]
-    priority: int = 0
+    def __init__(self, act_name: str, aliases: List[str], priority: int = 0):
+        self.act_name = act_name  # To musi pasować do pola 'act_name' w bazie Chroma
+        self.aliases = aliases    # Słowa kluczowe
+        self.priority = priority
 
+# ---------------------------------------------------------
+# KONFIGURACJA ROUTINGU (TWOJE USTAWY)
+# ---------------------------------------------------------
+# Ważne: act_name musi być identyczne jak to, co generuje vectorstore.py
+# (czyli np. "Udip", "Kpa", "Rodo" - wielkość liter ma znaczenie!)
 
-ACTS: List[ActRoute] = [
-    # --- Procedury ---
+ACTS = [
+    # 1. Ustawa o dostępie do informacji publicznej
     ActRoute(
-        act_name="Kodeks postępowania karnego",
-        aliases=("kpk", "kodeks postępowania karnego", "postępowania karnego", "proces karny",
-                 "postępowanie przygotowawcze", "akt oskarżenia", "oskarżony", "pokrzywdzony",
-                 "prokurator", "śledztwo", "dochodzenie", "tymczasowe aresztowanie"),
-        priority=120
-    ),
-    ActRoute(
-        act_name="Kodeks postępowania cywilnego",
-        aliases=("kpc", "kodeks postępowania cywilnego", "postępowania cywilnego", "pozew",
-                 "powód", "pozwany", "apelacja", "zażalenie", "nakaz zapłaty",
-                 "egzekucja", "komornik", "klauzula wykonalności", "zabezpieczenie"),
-        priority=120
-    ),
-    ActRoute(
-        act_name="Kodeks postępowania administracyjnego",
-        aliases=("kpa", "kodeks postępowania administracyjnego", "postępowania administracyjnego",
-                 "organ administracji", "decyzja administracyjna", "postanowienie",
-                 "strona postępowania", "doręczenia", "odwołanie", "zażalenie",
-                 "wznowienie postępowania", "stwierdzenie nieważności"),
-        priority=120
-    ),
-    ActRoute(
-        act_name="Kodeks postępowania w sprawach o wykroczenia",
-        aliases=("kpw", "postępowania w sprawach o wykroczenia", "wniosek o ukaranie",
-                 "obwiniony", "sprzeciw", "mandat karny", "postępowanie przyspieszone"),
-        priority=110
-    ),
-    ActRoute(
-        act_name="Kodeks wyborczy",
-        aliases=("kodeks wyborczy", "wybory", "głosowanie", "komisja wyborcza",
-                 "komitet wyborczy", "okręg wyborczy", "referendum", "kampania wyborcza"),
-        priority=105
-    ),
-
-    # --- Prawo materialne / szczególne ---
-    ActRoute(
-        act_name="Kodeks Karny",
-        aliases=("kodeks karny", "kk", "przestępstwo", "kara", "wina", "zamiar",
-                 "nieumyślność", "usilowanie", "współsprawstwo", "warunkowe umorzenie"),
+        act_name="Udip", 
+        aliases=[
+            "udip", "dostęp do informacji", "dostep do informacji", 
+            "informacja publiczna", "informacji publicznej",
+            "biuletyn informacji publicznej", "bip",
+            "wniosek o informację", "przetworzona",
+            "nieudostępnienie", "odmowa udostępnienia"
+        ],
         priority=100
     ),
+
+    # 2. Kodeks postępowania administracyjnego
     ActRoute(
-        act_name="Kodeks karny skarbowy",
-        aliases=("kodeks karny skarbowy", "kks", "przestępstwo skarbowe", "wykroczenie skarbowe",
-                 "uszczuplenie", "podatek", "akcyza", "cło", "faktura", "skarbowy"),
-        priority=100
-    ),
-    ActRoute(
-        act_name="Kodeks karny wykonawczy",
-        aliases=("kodeks karny wykonawczy", "kkw", "wykonywanie kary", "zakład karny",
-                 "warunkowe zwolnienie", "system wykonywania kary", "dozór", "readaptacja"),
-        priority=95
-    ),
-    ActRoute(
-        act_name="Kodeks wykroczeń",
-        aliases=("kodeks wykroczeń", "wykroczenie", "mandat", "areszt", "nagana", "grzywna", "kw"),
-        priority=95
-    ),
-    ActRoute(
-        act_name="Kodeks pracy",
-        aliases=("kodeks pracy", "stosunek pracy", "pracownik", "pracodawca", "umowa o pracę",
-                 "czas pracy", "urlop", "wynagrodzenie", "wypowiedzenie", "zwolnienie dyscyplinarne", "kp"),
-        priority=95
-    ),
-    ActRoute(
-        act_name="Kodeks rodzinny i opiekuńczy",
-        aliases=("kro", "kodeks rodzinny", "rodzinny i opiekuńczy", "małżeństwo", "rozwód",
-                 "separacja", "alimenty", "władza rodzicielska", "przysposobienie"),
-        priority=95
-    ),
-    ActRoute(
-        act_name="Kodeks spółek handlowych",
-        aliases=("ksh", "kodeks spółek handlowych", "spółka z o.o.", "spółka akcyjna",
-                 "zarząd", "rada nadzorcza", "zgromadzenie wspólników", "akcjonariusz",
-                 "kapitał zakładowy"),
+        act_name="Kodeks postępowania administracyjnego", # Lub "Kpa" - zależy jak vectorstore zapisał
+        aliases=[
+            "kpa", "kodeks postępowania administracyjnego", 
+            "postępowanie administracyjne", "decyzja administracyjna", 
+            "odwołanie", "zażalenie", "wznowienie postępowania",
+            "organ administracji", "termin załatwienia sprawy",
+            "milczące załatwienie", "bezczynność organu"
+        ],
         priority=90
     ),
+    
+    # Obsługa skrótu Kpa (gdyby vectorstore zapisał skrótowo)
     ActRoute(
-        act_name="Kodeks cywilny",
-        aliases=("kodeks cywilny", "kc", "zobowiązanie", "umowa", "odszkodowanie",
-                 "odpowiedzialność", "rękojmia", "przedawnienie", "własność", "posiadanie"),
-        priority=90
-    ),
-    ActRoute(
-        act_name="Ordynacja podatkowa",
-        aliases=("ordynacja podatkowa", "zobowiązanie podatkowe", "organ podatkowy",
-                 "postępowanie podatkowe", "interpretacja", "deklaracja", "ulga", "przedawnienie podatkowe"),
-        priority=90
-    ),
-    ActRoute(
-        act_name="Kodeks morski",
-        aliases=("kodeks morski", "statek", "armator", "kapitan", "żegluga", "czarter",
-                 "konosament", "awaria wspólna"),
-        priority=70
+        act_name="Kpa", 
+        aliases=["kpa", "kodeks postępowania administracyjnego"],
+        priority=89
     ),
 
-    # --- Konstytucja ---
+    # 3. GDPR (Rozporządzenie UE 2016/679)
+ActRoute(
+    act_name="Rodo ue",   # MUSI być identyczne jak w vectorstore / metadanych
+    aliases=[
+        "gdpr",
+        "rozporządzenie 2016/679", "2016/679",
+        "rozporzadzenie 2016/679",
+        "rozporządzenie ue", "rozporzadzenie ue",
+        "rozporządzenie o ochronie danych", "rozporzadzenie o ochronie danych",
+        # typowe słowa-klucze, które od razu powinny preferować GDPR:
+        "profilowanie", "profilowania",
+        "naruszenie ochrony danych", "naruszenia ochrony danych",
+        "zgłosić naruszenie", "zglosic naruszenie",
+        "72 godz", "72h",
+        "administracyjna kara pieniężna", "kara pieniężna", "kara pieniezna",
+        "4% obrotu", "20 mln"
+    ],
+    priority=110  # wyżej niż krajowe "Rodo"
+),
+
+    # 3. RODO (Ustawa o ochronie danych osobowych)
     ActRoute(
-        act_name="Konstytucja Rzeczypospolitej Polskiej",
-        aliases=("konstytucja", "konstytucja rp", "sejm", "senat", "prezydent",
-                 "trybunał konstytucyjny", "rzecznik praw obywatelskich", "wolności i prawa"),
-        priority=85
-    ),
+        act_name="Rodo",
+        aliases=[
+            "rodo", "ochrona danych", "dane osobowe", "odo",
+            "inspektor ochrony danych", "prezes urzędu", "uodo",
+            "naruszenie ochrony danych", "przetwarzanie danych"
+        ],
+        priority=95
+    )
 ]
 
-
-def is_cross_act(query: str) -> bool:
-    q = query.lower()
-    return any(x in q for x in ("porównaj", "różnica", "różnią się", "zestaw", "na tle", "zarówno", "a także"))
-
-
-# --- NOWE: heurystyka kwotowa (uniwersalna pod KW/KK próg 800) ---
-
-_THEFT_HINTS = ("kradzież", "kradnie", "przywłaszc", "zabiera", "włamaniem", "paserstwo")
-
-
-def _extract_amount_pln(query: str) -> Optional[int]:
-    q = query.lower().replace("\u00a0", " ")
-    m = re.search(r"(\d[\d\s]{0,10})\s*zł", q)
-    if not m:
-        return None
-    raw = m.group(1).replace(" ", "")
-    try:
-        return int(raw)
-    except Exception:
-        return None
-
+def _norm(text: str) -> str:
+    """Prosta normalizacja tekstu."""
+    return text.lower().strip()
 
 def route_act_names(query: str, max_acts: int = 2) -> List[str]:
-    q = query.lower()
+    """
+    Analizuje zapytanie i zwraca listę nazw aktów prawnych,
+    które najbardziej pasują do tematu.
+    """
+    q = _norm(query)
+    scores = []
 
-    # 1) Najpierw heurystyka kwotowa dla typowych pytań o kradzież/przywłaszczenie
-    amount = _extract_amount_pln(query)
-    if amount is not None and any(h in q for h in _THEFT_HINTS):
-        # Jeśli kwota < 800 zł, KW musi być w grze (u Ciebie próg 800 wynika z KW 119 §1)
-        if amount < 800:
-            return ["Kodeks wykroczeń"] if max_acts == 1 else ["Kodeks wykroczeń", "Kodeks Karny"]
-        else:
-            return ["Kodeks Karny"] if max_acts == 1 else ["Kodeks Karny", "Kodeks wykroczeń"]
-
-    # 2) Standardowe routowanie na aliasach
-    scored = []
     for act in ACTS:
-        s = 0
-        for a in act.aliases:
-            if a in q:
-                s += 10 + min(len(a) // 7, 6)
-        # skróty jako osobne słowo (np. kpk/kpa/kc/kk/kw/kp)
-        if re.search(r"\b(kpk|kpa|kpc|kc|kk|kks|kkw|kpw|kw|kp|ksh)\b", q) and any(
-            re.search(rf"\b{re.escape(tok)}\b", q) for tok in ("kpk","kpa","kpc","kc","kk","kks","kkw","kpw","kw","kp","ksh")
-        ):
-            pass
+        score = 0
+        for alias in act.aliases:
+            # Sprawdzamy czy alias występuje w zapytaniu
+            if alias in q:
+                # Dłuższe aliasy są zazwyczaj bardziej precyzyjne, więc punktujemy je wyżej
+                score += 10 + len(alias)
+        
+        if score > 0:
+            scores.append((score + act.priority, act.act_name))
 
-        if s > 0:
-            s += act.priority
-            scored.append((s, act.act_name))
+    # Sortujemy od najlepszego dopasowania
+    scores.sort(key=lambda x: x[0], reverse=True)
 
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    if not scored:
-        return []
-
-    take = max_acts if is_cross_act(query) else 1
-    return [name for _, name in scored[:take]]
+    # Zwracamy top N wyników
+    unique_acts = []
+    seen = set()
+    for _, name in scores:
+        if name not in seen:
+            unique_acts.append(name)
+            seen.add(name)
+    
+    if ("rodo" in q) or ("gdpr" in q) or ("2016/679" in q):
+        # dołóż GDPR
+        if "Rodo ue" not in unique_acts:
+            unique_acts.insert(0, "Rodo ue")
+        # dołóż ustawę krajową
+        if "Rodo" not in unique_acts:
+            unique_acts.append("Rodo")
+    
+    return unique_acts[:max_acts]

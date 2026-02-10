@@ -1,20 +1,25 @@
-{"id":"T001","query":"Co grozi za kradzież?"}
-{"id":"T002","query":"Jaka kara grozi za kradzież telefonu o wartości 500 zł?"}
-{"id":"T003","query":"Jaka kara grozi za kradzież telefonu o wartości 2000 zł?"}
-{"id":"T004","query":"Co grozi za kradzież z włamaniem?"}
-{"id":"T005","query":"Co grozi za kradzież szczególnie zuchwałą?"}
-{"id":"T006","query":"Co grozi, gdy po kradzieży użyto przemocy wobec pokrzywdzonego?"}
-{"id":"T007","query":"Co grozi za kradzież z włamaniem na szkodę osoby najbliższej?"}
-{"id":"T008","query":"Czy kradzież zawsze jest przestępstwem?"}
-{"id":"T009","query":"Jaka kara grozi za kradzież energii elektrycznej?"}
-{"id":"T010","query":"Czy za kradzież grozi kara pozbawienia wolności w zawieszeniu?"}
-{"id":"T011","query":"Podaj sankcję za kradzież."}
-{"id":"T012","query":"Co grozi za paserstwo?"}
-{"id":"T013","query":"Wskaż podstawę prawną kary za kradzież."}
-{"id":"T014","query":"Z jakiego przepisu wynika kara za kradzież?"}
-{"id":"T015","query":"Jaka jest różnica między kradzieżą a przywłaszczeniem?"}
-{"id":"T016","query":"Czy kradzież może być kwalifikowana jako przestępstwo skarbowe?"}
-{"id":"T017","query":"Co grozi za kradzież samochodu?"}
-{"id":"T018","query":"Jakie są okoliczności łagodzące karę za kradzież?"}
-{"id":"T019","query":"Czy można uniknąć kary za kradzież poprzez dobrowolne zwrócenie skradzionego mienia?"}
-{"id":"T020","query":"Jakie są różnice w karach za kradzież w zależności od wartości skradzionego mienia?"}
+{"id": "q1", "query": "Ile dni ma urząd na udostępnienie informacji publicznej?"}
+{"id": "q2", "query": "Jaki jest termin na wniesienie odwołania od decyzji administracyjnej?"}
+{"id": "q3", "query": "Kto jest stroną w postępowaniu administracyjnym?"}
+{"id": "q4", "query": "Co grozi za nieudostępnienie informacji publicznej wbrew obowiązkowi?"}
+{"id": "q5", "query": "Czy można żądać informacji przetworzonej?"}
+{"id": "q6", "query": "Kiedy organ może załatwić sprawę milcząco?"}
+{"id": "q7", "query": "O czym mówi art. 13 ustawy o dostępie do informacji publicznej?"}
+{"id": "q8", "query": "Jaka jest opłata za udostępnienie informacji?"}
+{"id": "q9", "query": "Co to jest ponowne wykorzystywanie informacji sektora publicznego?"}
+{"id": "q10", "query": "Kiedy można zawiesić postępowanie administracyjne?"}
+{"id": "q11", "query": "W jakim terminie należy zgłosić naruszenie ochrony danych osobowych organowi nadzorczemu?"}
+{"id": "q12", "query": "Co może być dowodem w postępowaniu administracyjnym?"}
+{"id": "q13", "query": "Czy prywatność osoby fizycznej zawsze ogranicza dostęp do informacji publicznej?"}
+{"id": "q14", "query": "Kiedy pracownik organu administracji podlega wyłączeniu od udziału w sprawie?"}
+{"id": "q15", "query": "Jaka jest maksymalna kara pieniężna za naruszenie RODO dla przedsiębiorstwa?"}
+{"id": "q16", "query": "W jakiej formie wnosi się podanie do organu administracji?"}
+{"id": "q17", "query": "Czy organ może sprostować błędy pisarskie w wydanej decyzji?"}
+{"id": "q18", "query": "Jaka jest stawka podatku VAT na usługi prawne?"}
+{"id": "q19", "query": "Co to jest profilowanie zgodnie z RODO?"}
+{"id": "q20", "query": "Kiedy decyzja administracyjna staje się ostateczna?"}
+{"id": "q21", "query": "Co się dzieje, gdy ostatni dzień terminu na wniesienie odwołania przypada w niedzielę?"}
+{"id": "q22", "query": "Czy jawność informacji publicznej jest ograniczona ze względu na prywatność osoby fizycznej pełniącej funkcję publiczną?"}
+{"id": "q23", "query": "Czy organ administracji może aresztować stronę za niewykonanie decyzji?"}
+{"id": "q24", "query": "Co musi zawierać metryka sprawy?"}
+{"id": "q25", "query": "Jaki jest termin na załatwienie sprawy w postępowaniu uproszczonym?"}

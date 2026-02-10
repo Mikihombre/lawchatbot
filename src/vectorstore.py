@@ -1,6 +1,7 @@
 # src/vectorstore.py
 import os
 import json
+import re
 from typing import List, Set, Tuple, Any, Optional
 
 from langchain_chroma import Chroma
@@ -25,23 +26,12 @@ def _batched(seq, batch_size: int):
     for i in range(0, len(seq), batch_size):
         yield seq[i : i + batch_size]
 
-
-MAX_BATCH = 4000  # bezpieczny limit dla Chroma
-
+MAX_BATCH = 4000 
 
 def _is_allowed_metadata_value(v: Any) -> bool:
-    """
-    Chroma akceptuje tylko:
-    str, int, float, bool, None
-    """
     return isinstance(v, (str, int, float, bool)) or v is None
 
-
 def _sanitize_metadata(meta: dict) -> dict:
-    """
-    Usuwa z metadanych wszystko, czego Chroma nie przyjmie
-    (listy, dict, itp.)
-    """
     clean = {}
     for k, v in meta.items():
         if _is_allowed_metadata_value(v):
@@ -50,9 +40,7 @@ def _sanitize_metadata(meta: dict) -> dict:
             clean[k] = str(v)
     return clean
 
-
 def _list_existing_sources(db: Chroma) -> Set[str]:
-    """Zwraca nazwy plików JSON już obecnych w bazie."""
     try:
         raw = db.get(include=["metadatas"])
         metas = raw.get("metadatas") or []
@@ -64,186 +52,153 @@ def _list_existing_sources(db: Chroma) -> Set[str]:
     except Exception:
         return set()
 
-
-def _fallback_act_name_from_filename(filename: str) -> str:
+def _clean_act_name(raw_source: str) -> str:
     """
-    Fallback, gdy JSON nie ma metadata['act_name'].
-    Chcemy format spójny z routing.py, np.:
-    'kodeks_postępowania_karnego.json' -> 'Kodeks postępowania karnego'
-    Bez .title(), bo to rozwala dopasowanie.
+    Zamienia 'kodeks_postępowania_administracyjnego.txt' -> 'Kodeks postępowania administracyjnego'
+    Zamienia 'udip.txt' -> 'Udip'
     """
-    base = filename.replace(".json", "").replace("_", " ").strip()
-    if not base:
-        return "Nieznany akt prawny"
-    return base[0].upper() + base[1:]
-
+    # Usuwamy rozszerzenie
+    name = raw_source.replace(".txt", "").replace(".json", "")
+    # Zamieniamy podkreślenia na spacje
+    name = name.replace("_", " ")
+    # Usuwamy dziwne znaki
+    name = name.strip()
+    # Wielka litera na początku
+    if name:
+        return name[0].upper() + name[1:]
+    return "Ustawy"
 
 # ============================================================
-#  JSON LOADER
+#  LOADER (Poprawiona wersja)
 # ============================================================
 
-def _load_json_files(docs_path: str, new_files: List[str]) -> List[Document]:
-    """
-    Wczytuje JSON-y wygenerowane przez parsery.
-    """
+def _load_json_files(docs_path: str, filenames: List[str]) -> List[Document]:
     documents: List[Document] = []
 
-    for filename in new_files:
+    for filename in filenames:
         file_path = os.path.join(docs_path, filename)
-        print(f"   📖 Czytam plik: {filename}...")
+        print(f"   📖 [LOADER] Otwieram plik: {filename}...")
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                lines_processed = 0
+                
+                for line_num, line in enumerate(f):
+                    line = line.strip()
+                    if not line: continue
+                    
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
 
-            if not isinstance(data, list):
-                print(f"   ⚠️ Pomijam {filename} – JSON nie jest listą.")
-                continue
+                    # TREŚĆ
+                    content = item.get("rag_text") or item.get("content") or item.get("text")
+                    if not content or len(str(content)) < 5:
+                        continue
 
-            fallback_act_name = _fallback_act_name_from_filename(filename)
+                    # ---------------------------------------------------------
+                    # FIX: LOGIKA NAZEWNICTWA AKTÓW (Kluczowe dla Routingu!)
+                    # ---------------------------------------------------------
+                    
+                    # 1. Ustal źródło (nazwę pliku wewnątrz metadanych)
+                    inner_source = item.get("source", filename)
 
-            for item in data:
-                if not isinstance(item, dict):
-                    continue
+                    # 2. Ustal nazwę aktu (act_name)
+                    # JEŚLI ETL zapisał "act_name" (np. "PPSA"), bierzemy to w ciemno.
+                    # JEŚLI NIE, dopiero wtedy używamy funkcji czyszczącej.
+                    act_name_from_json = item.get("act_name")
+                    
+                    if act_name_from_json:
+                        real_act_name = act_name_from_json
+                    else:
+                        real_act_name = _clean_act_name(inner_source)
 
-                content = (
-                    item.get("text_content")
-                    or item.get("text")
-                    or item.get("content")
-                )
+                    # ---------------------------------------------------------
 
-                if not isinstance(content, str) or len(content.strip()) < 5:
-                    continue
+                    # METADANE
+                    meta = {
+                        "source": inner_source,      # np. PPSA (ważne dla deduplikacji)
+                        "act_name": real_act_name,   # np. PPSA (ważne dla filtrowania w Chroma)
+                        "article": item.get("article", ""),
+                        "hierarchy": item.get("hierarchy", ""),
+                    }
+                    
+                    # Opcjonalne czyszczenie metadanych (jeśli masz taką funkcję)
+                    if "_sanitize_metadata" in globals():
+                        meta = _sanitize_metadata(meta)
 
-                raw_meta = item.get("metadata", {})
-                if not isinstance(raw_meta, dict):
-                    raw_meta = {}
-
-                meta = _sanitize_metadata(raw_meta)
-
-                # Wymuszone pola
-                meta["source"] = filename
-
-                # Kluczowa zmiana: act_name bierzemy z metadanych jeśli jest,
-                # w przeciwnym razie fallback z nazwy pliku (bez title-case).
-                meta_act_name = meta.get("act_name")
-                if not isinstance(meta_act_name, str) or not meta_act_name.strip():
-                    meta_act_name = fallback_act_name
-                meta["act_name"] = meta_act_name
-
-                # Page default
-                meta["page"] = meta.get("page", 1)
-
-                full_content = (
-                    f"USTAWA: {meta_act_name}\n"
-                    f"TREŚĆ PRZEPISU:\n{content}"
-                )
-
-                documents.append(
-                    Document(
-                        page_content=full_content,
-                        metadata=meta,
+                    documents.append(
+                        Document(
+                            page_content=content,
+                            metadata=meta,
+                        )
                     )
-                )
+                    lines_processed += 1
+
+                print(f"      -> Przetworzono rekordów: {lines_processed}")
 
         except Exception as e:
-            print(f"   ❌ Błąd przy wczytywaniu {filename}: {e}")
+            print(f"   ❌ Błąd krytyczny przy pliku {filename}: {e}")
 
     return documents
 
-
 # ============================================================
-#  MAIN
+#  MAIN BUILDER
 # ============================================================
 
 def build_vector_store(embeddings) -> Tuple[Chroma, Any]:
-    """
-    Buduje lub aktualizuje bazę Chroma.
-    """
-
-
     db: Optional[Chroma] = None
     existing_sources: Set[str] = set()
 
-    # 1) Czy baza już istnieje?
     if os.path.exists(DB_PATH) and os.listdir(DB_PATH):
         print(f"✅ Wykryto istniejącą bazę w '{DB_PATH}'.")
-        db = Chroma(
-            persist_directory=DB_PATH,
-            embedding_function=embeddings,
-        )
+        db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
         existing_sources = _list_existing_sources(db)
     else:
         print("⚡ Tworzę nową, pustą bazę Chroma.")
 
-    # 2) JSON-y w folderze
-    all_files = [
-        f for f in os.listdir(DOCS_PATH)
-        if f.lower().endswith(".json")
-    ]
-    print("[DEBUG] DOCS_PATH =", DOCS_PATH)
-    print("[DEBUG] JSON files in DOCS_PATH:")
-    for f in sorted(all_files):
-        print(" -", f)
-
+    # Skanowanie
+    all_files = [f for f in os.listdir(DOCS_PATH) if f.lower().endswith((".json", ".jsonl"))]
     new_files = [f for f in all_files if f not in existing_sources]
 
     print("\n📊 STATUS BAZY:")
     print(f" - Pliki w bazie: {len(existing_sources)}")
-    print(f" - Pliki w folderze: {len(all_files)}")
     print(f" - Do dodania: {len(new_files)}")
 
-    # 3) Jeśli nic nowego, tylko zwróć DB+retriever
     if not new_files:
         print("✅ Baza jest aktualna.")
-        if db is None:
-            db = Chroma(
-                persist_directory=DB_PATH,
-                embedding_function=embeddings,
-            )
+        if db is None: db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
+        return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})
 
-        retriever = db.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": RETRIEVER_K},
-        )
-        return db, retriever
-
-    # 4) Wczytanie JSON-ów
+    # Ładowanie
     print(f"\n🚀 Rozpoczynam procesowanie {len(new_files)} nowych plików...")
-    raw_docs = _load_json_files(DOCS_PATH, new_files)
+    all_docs = _load_json_files(DOCS_PATH, new_files)
+    
+    if not all_docs:
+        print("⚠️ Brak dokumentów.")
+        if db is None: db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
+        return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})
 
-    if not raw_docs:
-        raise RuntimeError("❌ Nie udało się wczytać żadnych dokumentów.")
-
-    # 5) Chunking
+    # Chunking
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
         separators=["\n\n", "\n", " ", ""],
     )
+    final_chunks = splitter.split_documents(all_docs)
+    print(f"✂️  Ostatecznie: {len(final_chunks)} chunków do zapisu.")
 
-    final_chunks = splitter.split_documents(raw_docs)
-    print(f"✂️  Dokumenty pocięte na {len(final_chunks)} chunków.")
-
-    # 6) Zapis do bazy
+    # Zapis
     if db is None:
-        db = Chroma(
-            persist_directory=DB_PATH,
-            embedding_function=embeddings,
-        )
+        db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 
     total_added = 0
     print("💾 Zapisywanie do bazy wektorowej...")
-
     for batch in _batched(final_chunks, MAX_BATCH):
         db.add_documents(batch)
         total_added += len(batch)
         print(f"   → Zapisano {total_added}/{len(final_chunks)}")
 
     print("✅ Baza zaktualizowana.")
-
-    retriever = db.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": RETRIEVER_K},
-    )
-    return db, retriever
+    return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})

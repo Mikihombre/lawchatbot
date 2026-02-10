@@ -1,0 +1,90 @@
+[
+    {
+        "question": "Czym jest informacja publiczna?",
+        "answer": "Informacja publiczna to każda informacja o działalności organów władzy publicznej lub innych podmiotów wykonujących zadania publiczne (np. samorządów, uczelni czy organizacji korzystających z majątku państwowego). Jest to prawo zagwarantowane obywatelom konstytucyjnie (art. 61 Konstytucji RP) oraz ustawowo (art. 2 ust. 1 Ustawy o dostępie do informacji publicznej, dalej „u.d.i.p.”)."
+    },
+    {
+        "question": "Kto może żądać informacji publicznej?",
+        "answer": "Prawo dostępu do informacji publicznej przysługuje każdemu – w świetle ustawy „każdemu przysługuje prawo dostępu do informacji publicznej”. Konstytucja (art. 61) mówi o prawie obywatela do informacji, ale prawo do informacji publicznej może być realizowane także przez inne osoby (nie wymaga wykazywania interesu prawnego lub faktycznego). Oznacza to, że wnioskodawca nie musi uzasadniać powodu swojego zapytania."
+    },
+    {
+        "question": "Kto ma obowiązek udostępnić informacje publiczną?",
+        "answer": "Ustawodawca wymienia w art. 4 u.d.i.p. kategorie podmiotów zobowiązanych do udostępniania informacji – są to przede wszystkim organy władzy publicznej (np. ministerstwa, urzędy, starostwa, sądy) oraz jednostki organizacyjne im podporządkowane, a także inne osoby prawne wykonujące zadania publiczne (np. szkoły, uczelnie, jednostki ochrony zdrowia, organizacje samorządowe, fundacje czy zakłady pracy publicznej). Informacje dotyczące ich działalności powinny być udostępniane z urzędu lub na wniosek."
+    },
+    {
+        "question": "Czy muszę uzasadniać wniosek i podawać swój interes prawny?",
+        "answer": "Nie. Ustawa wyraźnie stanowi, że od wnioskującego „nie wolno żądać wykazania interesu prawnego lub faktycznego” (art. 2 ust. 2 u.d.i.p.). Oznacza to, że wniosek o informację publiczną nie wymaga uzasadnienia – wystarczy wskazać, jaką informację się żąda. Wnioskodawca nie musi wykazywać, dlaczego potrzebuje tych danych."
+    },
+    {
+        "question": "Czy mogę złożyć wniosek anonimowo (bez podania swoich danych)?",
+        "answer": "Tak. Ustawa nie wymaga podawania danych osobowych wnioskodawcy. Jak podkreślił Rzecznik Praw Obywatelskich, „każdy, nawet bez podawania swoich danych personalnych oraz adresu zamieszkania, może zwrócić się z wnioskiem” o udostępnienie informacji publicznej. Organ nie może odmówić udzielenia informacji tylko z powodu braku danych wnioskodawcy, o ile informacja ma być udostępniona (nie wydaje decyzji odmownej z uwagi na anonimowość)."
+    },
+    {
+        "question": "Czy organ może odmówić udostępnienia informacji?",
+        "answer": "Tak. Prawo do informacji publicznej nie jest absolutne – podlega ograniczeniom w przypadku ochrony określonych tajemnic. Ustawa wymienia przesłanki odmowy: informacja może być wyłączona z ujawnienia m.in. z powodu ochrony informacji niejawnych (tajnych), ochrony prywatności osób fizycznych lub tajemnicy przedsiębiorcy. W praktyce oznacza to, że urząd może odmówić udostępnienia informacji, które według prawa nie podlegają ujawnieniu (np. dane osobowe, tajemnice służbowe), wydając decyzję odmowną (na podstawie art. 16 u.d.i.p.)."
+    },
+    {
+        "question": "Jak złożyć wniosek o informację publiczną?",
+        "answer": "Wniosek można złożyć dowolnemu organowi lub jednostce, która ma żądaną informację. Sposoby doręczenia wniosku to: wysłanie listownie, złożenie osobiście w urzędzie, elektronicznie przez ePUAP lub e-Doręczenia, a nawet pocztą elektroniczną (e-mail) – jeśli urząd taką formę wskazuje. Nie ma jednolitego wzoru, ale zwykle podaje się dane wnioskodawcy (o ile chce), precyzyjne określenie żądanej informacji (zakres, okres, dokumenty) oraz żądaną formę udostępnienia. Urząd publikuje przykładowe wzory wniosków (np. dostępny [tutaj][34])."
+    },
+    {
+        "question": "Jak powinien być sformułowany wniosek?",
+        "answer": "Wniosek musi być jasno sformułowany, tak aby dało się ustalić, o jaką informację chodzi (podmiot odpowiedzialny, zakres, okres). Nieprecyzyjne, chaotyczne lub sprzeczne wnioski nie zostaną uznane za skuteczne. W praktyce należy więc opisać, jakiej treści informacji się żąda (np. „kopie dokumentów” lub „dane z rejestru X z lat …”), wskazać instytucję, od której się żąda, i – jeśli jest szczególne – formę udostępnienia (np. kserokopie, plik elektroniczny)."
+    },
+    {
+        "question": "Czy wniosek musi być podpisany?",
+        "answer": "Nie ma obowiązku podpisu – wniosek można złożyć nawet niepodpisany lub anonimowo. Ustawa nie narzuca formy pisemnej; dopuszczalne są też wnioski składane elektronicznie (podpisem kwalifikowanym lub profilem zaufanym) lub, w wyjątkowych przypadkach, ustnie (patrz niżej). W praktyce jednak wnioski dokumentuje się na piśmie lub ePUAP, co ułatwia udokumentowanie procedury."
+    },
+    {
+        "question": "Czy wniosek można złożyć ustnie?",
+        "answer": "Generalnie udostępnianie informacji następuje na wniosek pisemny lub elektroniczny. Jednak art. 10 ust. 2 u.d.i.p. przewiduje, że informacja publiczna, która może być udostępniona „niezwłocznie”, może być udzielona bez formalnego pisemnego wniosku, także ustnie lub w inny sposób. Oznacza to, że jeśli odpowiadasz w urzędzie na proste pytanie (np. o adres placówki, godziny pracy itp.) i informacja jest od ręki dostępna, możesz ją otrzymać ustnie lub telefonicznie (bez składania pisemnego wniosku)."
+    },
+    {
+        "question": "W jakiej formie otrzymam informację?",
+        "answer": "Informację publiczną organ udostępnia w sposób i formie zgodnej z wnioskiem, o ile dysponuje odpowiednimi środkami technicznymi (np. kserokopią dokumentu, wydrukiem PDF, udostępnieniem do wglądu w urzędzie, przekazem mailowym itp.). Jeśli określona forma nie jest możliwa, urząd powinien niezwłocznie wskazać inną dostępną formę. Wnioskodawca ponosi ewentualne koszty związane tylko z przekształceniem informacji (patrz pytanie o opłaty)."
+    },
+    {
+        "question": "Ile czasu urząd ma na odpowiedź?",
+        "answer": "Organ ma 14 dni na udostępnienie informacji od dnia złożenia poprawnego wniosku. Jest to termin ustawowy (art. 13 ust. 1 u.d.i.p.), liczony w pełnych dniach od doręczenia wniosku (przypada na 15. dzień, z wyłączeniem dnia złożenia).  Jeśli urząd nie zdąży w tym czasie, poinformuje wnioskodawcę o przyczynie opóźnienia i wyznaczy nowy termin nie dłuższy niż 2 miesiące od złożenia wniosku."
+    },
+    {
+        "question": "Czy informację należy udostępnić „bez zbędnej zwłoki”?",
+        "answer": "Ustawa nakazuje udostępnić informację „bez zbędnej zwłoki” (art. 13 ust. 1 u.d.i.p.), co podkreśla zasadę szybkości procedury. Formalnie oznacza to, że jeżeli wniosek wymaga jedynie niewielkiego nakładu pracy (np. szybkie wydrukowanie jednego dokumentu), organ powinien to zrobić natychmiast, a w każdym wypadku nie później niż w ciągu 14 dni od złożenia wniosku."
+    },
+    {
+        "question": "Czy urząd może pobrać opłatę za udostępnienie?",
+        "answer": "Udostępnianie informacji publicznej jest w zasadzie bezpłatne. Ustawa przewiduje jedynie, że urząd może pobrać od wnioskodawcy opłatę równą poniesionym przez siebie kosztom związanym z koniecznością przekształcenia informacji we wskazaną przez wnioskodawcę formę (art. 15 u.d.i.p.). Przykładowo, jeśli chciałbyś uzyskać bardzo dużą ilość danych w specyficznym formacie i urząd musi je przekształcić z wewnętrznych baz, może obciążyć opłatą za pracę i materiały. W praktyce większość standardowych wniosków (kserokopie, wydruki, przesłanie plików) jest realizowana bez opłat."
+    },
+    {
+        "question": "Jakie informacje mogą być zastrzeżone i niedostępne?",
+        "answer": "Prawo dostępu do informacji publicznej podlega ograniczeniom przewidzianym w innych przepisach. Przede wszystkim informacje niejawne (tajne państwowe) oraz inne ustawowe tajemnice (np. wojskowe) nie podlegają udostępnieniu. Ponadto dostęp może być ograniczony ze względu na prywatność osoby fizycznej lub tajemnicę przedsiębiorcy. Jednakże ustawa wyraźnie wskazuje wyjątki: ochrona prywatności czy tajemnica firmy nie dotyczy informacji o osobach publicznych w zakresie pełnionych przez nie funkcji. Oznacza to, że np. dane dotyczące wynagrodzeń lub nagród urzędników czy budżetu państwa są jawne, ale np. dane medyczne pracownika nie są."
+    },
+    {
+        "question": "Czy mogę uzyskać dane osobowe innych osób?",
+        "answer": "Zasadniczo nie – prywatne dane osobowe (np. nr PESEL, dane medyczne, majątek prywatny itp.) chroni RODO i nie są udostępniane na podstawie udip. Jedynym wyjątkiem są dane osób pełniących funkcje publiczne, które wiążą się z wykonywaną funkcją (np. wynagrodzenie prezydenta miasta, posła, prezesa spółki skarbu państwa). W praktyce, jeżeli żądana informacja zawiera dane osobowe niepublicznych osób trzecich, urząd powinien je zanonimizować lub odmówić udostępnienia (w drodze decyzji)."
+    },
+    {
+        "question": "Kiedy organ może odmówić udostępnienia informacji?",
+        "answer": "Organ odmawia udzielenia informacji tylko w przypadkach przewidzianych przez prawo (np. powyższe tajemnice) i czyni to w formie decyzji administracyjnej (art. 16 u.d.i.p.). Decyzja odmowna musi być uzasadniona i zawierać podstawę prawną (np. wskazanie art.5 u.d.i.p. o tajemnicy). Jeżeli odmowa następuje z przyczyn wskazanych w art. 14 ust. 2 (brak możliwości udostępnienia w żądanej formie), również jest wydawana decyzja."
+    },
+    {
+        "question": "Co zrobić, jeśli otrzymam decyzję odmowną?",
+        "answer": "Od decyzji odmownej przysługuje odwołanie do organu wyższego stopnia w terminie 14 dni od doręczenia decyzji. W odwołaniu można ponownie przedstawić żądanie informacji i wskazać nowe argumenty. Organ wyższej instancji (np. wojewoda wobec starosty, minister wobec wojewody itp.) rozpatruje odwołanie. Jeżeli po rozpatrzeniu odwołania urząd nadal odmawia udostępnienia informacji, wnosi się skargę do sądu administracyjnego."
+    },
+    {
+        "question": "Co można zrobić w przypadku bezczynności organu?",
+        "answer": "Jeżeli organ w ustawowym terminie nie udzieli informacji ani nie wyda decyzji (np. bez odpowiedzi na wniosek lub opóźnia się powyżej 14 dni bez usprawiedliwienia), można skierować skargę o czynność niedozwoloną do sądu administracyjnego. Możliwe jest też powiadomienie Rzecznika Praw Obywatelskich o podejrzeniu naruszenia prawa do informacji publicznej."
+    },
+    {
+        "question": "Czy może pomóc Rzecznik Praw Obywatelskich (RPO)?",
+        "answer": "RPO stoi na straży dostępu do informacji publicznej i może interweniować w przypadkach naruszenia prawa (np. w razie bezczynności urzędu lub arbitralnej odmowy). Złożenie skargi do wojewódzkiego sądu administracyjnego jest jednak typową drogą prawną. RPO może wystąpić w mediach lub pismach wyjaśniających w sporach legislacyjnych, ale formalną kontrolę prowadzą sądy i organy administracyjne."
+    },
+    {
+        "question": "Co powinno być dostępne w Biuletynie Informacji Publicznej (BIP)?",
+        "answer": "Organy mają obowiązek publikować podstawowe informacje z urzędu m.in. akty prawa miejscowego, dane o strukturze organizacyjnej, budżecie, majątku, programach, zamówieniach publicznych czy protokołach zebrań. Konkretnie, jeżeli dana informacja nie znajduje się na stronie BIP, organ powinien udostępnić ją na wniosek (art. 10 ust. 1 u.d.i.p.). Każda jednostka publiczna prowadzi własną stronę BIP, gdzie zamieszcza informacje wymagane przez prawo."
+    },
+    {
+        "question": "Czy mogę uzyskać informację bez składania wniosku (z urzędu)?",
+        "answer": "Tak – wiele danych już jest dostępnych publicznie. Ustawa przewiduje, że jeśli informacja „może być niezwłocznie udostępniona”, organ powinien udostępnić ją nawet bez formalnego wniosku (może to być odpowiedź ustna lub przekazanie dokumentu bez oczekiwania 14 dni). Przykładem mogą być udostępniane od ręki dane statystyczne, harmonogramy czy wydruki z rejestrów jawnych. Warto najpierw sprawdzić BIP, stronę internetową instytucji lub portale rządowe (np. dane.gov.pl) przed składaniem wniosku. Powyższe odpowiedzi opierają się na obowiązującym stanie prawnym (Ustawa o dostępie do informacji publicznej oraz Konstytucja RP) oraz wyjaśnieniach organów administracji. Dla pełnych informacji warto również zapoznać się z komentarzami Rzecznika Praw Obywatelskich i orzecznictwem sądów administracyjnych. Pytania w tym FAQ dobrano na podstawie wytycznych prawnych oraz analiz najczęściej zadawanych przez obywateli kwestii. Kluczowe akty prawne: Ustawa z dnia 6 września 2001 r. o dostępie do informacji publicznej (tekst jedn. Dz.U. 2018 poz. 1330), Konstytucja RP (art. 61)."
+    }
+]

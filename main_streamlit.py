@@ -50,7 +50,7 @@ st.markdown(
 
     /* Styl dla źródeł prawnych */
     .source-box {
-        background-color: #f8f9fa;
+        background-color: # 
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 10px;
@@ -87,15 +87,9 @@ def init_rag():
     db, _ = build_vector_store(embeddings)
 
     retriever = ActRoutingRetriever(
-        vectorstore=db,
-        k=RETRIEVER_K,
-        max_acts=2,
-        debug=True,
-        search_type="mmr",
-        fetch_k=60,
-        lambda_mult=0.6,
-        enable_sanction_filter=True,
-        sanction_k=6,
+    vectorstore=db,
+    max_acts=2,
+    debug=True,
     )
 
     rag_chain = build_rag_chain(llm, retriever, QA_PROMPT, DOCUMENT_PROMPT)
@@ -126,7 +120,33 @@ for msg in st.session_state.messages:
 # ---------- Logika RAG ----------
 def run_rag_pipeline(user_query: str):
     rag_chain = st.session_state.rag_chain
-    result = rag_chain.invoke({"input": user_query}) 
+    
+    # 1. Konwersja historii Streamlit -> LangChain Messages
+    # Bierzemy ostatnie 6 wiadomości (3 pary pytań/odpowiedzi), żeby nie zapchać kontekstu.
+    # Pomijamy ostatnią wiadomość usera, bo ona jest w 'user_query' (chociaż LangChain sobie z tym radzi, lepiej być precyzyjnym).
+    
+    chat_history_objs = []
+    # Iterujemy po historii (z wyłączeniem bieżącego pytania, które dopiero przetwarzamy)
+    # Ale w twoim kodzie appendujesz usera PRZED wywołaniem tej funkcji, 
+    # więc musimy uważać, żeby nie zdublować.
+    
+    # Bezpieczniej: weźmy wszystko z historii oprócz ostatniego elementu (jeśli to user)
+    msgs_to_convert = st.session_state.messages[:-1] 
+    
+    # Ograniczamy do ostatnich 6, żeby było szybciej
+    for msg in msgs_to_convert[-6:]: 
+        if msg["role"] == "user":
+            chat_history_objs.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            chat_history_objs.append(AIMessage(content=msg["content"]))
+    
+    # 2. Wywołanie łańcucha z historią
+    # Teraz przekazujemy słownik z dwoma kluczami: 'input' i 'chat_history'
+    result = rag_chain.invoke({
+        "input": user_query,
+        "chat_history": chat_history_objs
+    })
+    
     return result.get("answer", ""), result.get("context", [])
 
 # ---------- INPUT ----------
