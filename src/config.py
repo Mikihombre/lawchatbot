@@ -33,7 +33,7 @@ FINAL_K = 10              # Tyle oddajemy do LLM (lejek wylotowy)
 
 # --- KONFIGURACJA OLLAMA ---
 SERVER_URL = "http://127.0.0.1:11434"
-MODEL_NAME = "gemma3:12b"
+MODEL_NAME = "gemma3:4b"
 DEBUG = True
 
 # --- DEBUG (Wypisze w konsoli przy starcie) ---

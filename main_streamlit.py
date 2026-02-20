@@ -50,7 +50,7 @@ st.markdown(
 
     /* Styl dla źródeł prawnych */
     .source-box {
-        background-color: # 
+        background-color: rgba(255, 255, 255, 0.06) !important;   
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 10px;
@@ -117,37 +117,55 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
 
-# ---------- Logika RAG ----------
+def build_chat_history(messages, max_pairs=3):
+    """
+    Buduje historię do HistoryAwareRetriever tylko z kompletnych par:
+    user -> assistant. Dzięki temu condense nie dostaje "śmieci"
+    ani nieparzystych elementów.
+
+    max_pairs=3 => maks. 6 wiadomości w historii (3 pytania + 3 odpowiedzi)
+    """
+    history = []
+    pairs = []
+    current_user = None
+
+    for msg in messages:
+        role = msg.get("role")
+        content = (msg.get("content") or "").strip()
+        if not content:
+            continue
+
+        if role == "user":
+            current_user = content
+
+        elif role == "assistant":
+            if current_user is not None:
+                pairs.append((current_user, content))
+                current_user = None
+
+    # bierzemy ostatnie max_pairs par
+    for u, a in pairs[-max_pairs:]:
+        history.append(HumanMessage(content=u))
+        history.append(AIMessage(content=a))
+
+    return history
+
+
 def run_rag_pipeline(user_query: str):
     rag_chain = st.session_state.rag_chain
-    
-    # 1. Konwersja historii Streamlit -> LangChain Messages
-    # Bierzemy ostatnie 6 wiadomości (3 pary pytań/odpowiedzi), żeby nie zapchać kontekstu.
-    # Pomijamy ostatnią wiadomość usera, bo ona jest w 'user_query' (chociaż LangChain sobie z tym radzi, lepiej być precyzyjnym).
-    
-    chat_history_objs = []
-    # Iterujemy po historii (z wyłączeniem bieżącego pytania, które dopiero przetwarzamy)
-    # Ale w twoim kodzie appendujesz usera PRZED wywołaniem tej funkcji, 
-    # więc musimy uważać, żeby nie zdublować.
-    
-    # Bezpieczniej: weźmy wszystko z historii oprócz ostatniego elementu (jeśli to user)
-    msgs_to_convert = st.session_state.messages[:-1] 
-    
-    # Ograniczamy do ostatnich 6, żeby było szybciej
-    for msg in msgs_to_convert[-6:]: 
-        if msg["role"] == "user":
-            chat_history_objs.append(HumanMessage(content=msg["content"]))
-        elif msg["role"] == "assistant":
-            chat_history_objs.append(AIMessage(content=msg["content"]))
-    
-    # 2. Wywołanie łańcucha z historią
-    # Teraz przekazujemy słownik z dwoma kluczami: 'input' i 'chat_history'
+
+    # ✅ Historia tylko z kompletnych par user->assistant
+    chat_history_objs = build_chat_history(st.session_state.messages, max_pairs=3)
+
     result = rag_chain.invoke({
         "input": user_query,
         "chat_history": chat_history_objs
     })
-    
-    return result.get("answer", ""), result.get("context", [])
+
+    answer = result.get("answer") or result.get("output_text") or ""
+    docs = result.get("context") or result.get("documents") or []
+
+    return answer, docs
 
 # ---------- INPUT ----------
 chat_value = st.chat_input(

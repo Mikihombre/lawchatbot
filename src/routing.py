@@ -1,126 +1,164 @@
 # src/routing.py
 import re
-from typing import List, Optional
+from typing import List
 
-# Prosta klasa do przechowywania reguł
+
 class ActRoute:
     def __init__(self, act_name: str, aliases: List[str], priority: int = 0):
-        self.act_name = act_name  # To musi pasować do pola 'act_name' w bazie Chroma
-        self.aliases = aliases    # Słowa kluczowe
+        self.act_name = act_name
+        self.aliases = [a.lower().strip() for a in aliases]
         self.priority = priority
 
-# ---------------------------------------------------------
-# KONFIGURACJA ROUTINGU (TWOJE USTAWY)
-# ---------------------------------------------------------
-# Ważne: act_name musi być identyczne jak to, co generuje vectorstore.py
-# (czyli np. "Udip", "Kpa", "Rodo" - wielkość liter ma znaczenie!)
 
 ACTS = [
-    # 1. Ustawa o dostępie do informacji publicznej
+    # UDIP
     ActRoute(
-        act_name="Udip", 
+        act_name="Udip",
         aliases=[
-            "udip", "dostęp do informacji", "dostep do informacji", 
+            "udip",
+            "dostęp do informacji", "dostep do informacji",
             "informacja publiczna", "informacji publicznej",
             "biuletyn informacji publicznej", "bip",
-            "wniosek o informację", "przetworzona",
-            "nieudostępnienie", "odmowa udostępnienia"
+            "wniosek o informację", "wniosek o informacje",
+            "informacja przetworzona", "przetworzona",
+            "odmowa udostępnienia", "nieudostępnienie"
         ],
         priority=100
     ),
 
-    # 2. Kodeks postępowania administracyjnego
+    # KPA
     ActRoute(
-        act_name="Kodeks postępowania administracyjnego", # Lub "Kpa" - zależy jak vectorstore zapisał
+        act_name="Kodeks postępowania administracyjnego",
         aliases=[
-            "kpa", "kodeks postępowania administracyjnego", 
-            "postępowanie administracyjne", "decyzja administracyjna", 
-            "odwołanie", "zażalenie", "wznowienie postępowania",
-            "organ administracji", "termin załatwienia sprawy",
-            "milczące załatwienie", "bezczynność organu"
+            "kpa", "kodeks postępowania administracyjnego",
+            "postępowanie administracyjne",
+            "decyzja administracyjna",
+            "odwołanie", "odwołanie od decyzji",
+            "zażalenie",
+            "wznowienie postępowania",
+            "stwierdzenie nieważności", "nieważność decyzji",
+            "ponaglenie",
+            "milczące załatwienie", "milczace zalatwienie",
+            "termin załatwienia sprawy", "termin zalatwienia sprawy",
+            "metryka sprawy",
         ],
         priority=90
     ),
-    
-    # Obsługa skrótu Kpa (gdyby vectorstore zapisał skrótowo)
+
+    # RODO UE / GDPR
     ActRoute(
-        act_name="Kpa", 
-        aliases=["kpa", "kodeks postępowania administracyjnego"],
-        priority=89
+        act_name="Rodo ue",
+        aliases=[
+            "gdpr",
+            "ogólne rozporządzenie", "ogolne rozporzadzenie",
+            "2016/679",
+            "rozporządzenie 2016/679", "rozporzadzenie 2016/679",
+            "profilowanie", "profilowania",
+            "naruszenie ochrony danych", "naruszenia ochrony danych",
+            "72h", "72 godz", "72 godziny", "72 hours",
+            "administracyjna kara pieniężna", "kara pieniężna",
+            "4% obrotu", "20 mln", "20 milionów"
+        ],
+        priority=110
     ),
 
-    # 3. GDPR (Rozporządzenie UE 2016/679)
-ActRoute(
-    act_name="Rodo ue",   # MUSI być identyczne jak w vectorstore / metadanych
-    aliases=[
-        "gdpr",
-        "rozporządzenie 2016/679", "2016/679",
-        "rozporzadzenie 2016/679",
-        "rozporządzenie ue", "rozporzadzenie ue",
-        "rozporządzenie o ochronie danych", "rozporzadzenie o ochronie danych",
-        # typowe słowa-klucze, które od razu powinny preferować GDPR:
-        "profilowanie", "profilowania",
-        "naruszenie ochrony danych", "naruszenia ochrony danych",
-        "zgłosić naruszenie", "zglosic naruszenie",
-        "72 godz", "72h",
-        "administracyjna kara pieniężna", "kara pieniężna", "kara pieniezna",
-        "4% obrotu", "20 mln"
-    ],
-    priority=110  # wyżej niż krajowe "Rodo"
-),
-
-    # 3. RODO (Ustawa o ochronie danych osobowych)
+    # RODO PL (ustawa)
     ActRoute(
         act_name="Rodo",
         aliases=[
-            "rodo", "ochrona danych", "dane osobowe", "odo",
-            "inspektor ochrony danych", "prezes urzędu", "uodo",
-            "naruszenie ochrony danych", "przetwarzanie danych"
+            "uodo",
+            "ustawa o ochronie danych",
+            "prezes urzędu", "prezes urzedu",
+            "puodo",
+            "inspektor ochrony danych", "iod",
         ],
         priority=95
-    )
+    ),
+
+    # PPSA
+    ActRoute(
+        act_name="PPSA",
+        aliases=[
+            "ppsa",
+            "sąd administracyjny", "sad administracyjny",
+            "wsa", "wojewódzki sąd administracyjny", "wojewodzki sad administracyjny",
+            "nsa", "naczelny sąd administracyjny", "naczelny sad administracyjny",
+            "skarga do wsa",
+            "skarga do sądu administracyjnego", "skarga do sadu administracyjnego",
+            "skarga kasacyjna",
+            "skarga na bezczynność", "skarga na bezczynnosc",
+            "skarga na przewlekłość", "skarga na przewleklosc",
+            "grzywna za bezczynność", "grzywna za bezczynnosc",
+            "wstrzymanie wykonania decyzji",
+            "odrzucenie skargi", "oddalenie skargi"
+        ],
+        priority=90
+    ),
+
+    # Prawo budowlane
+    ActRoute(
+        act_name="Prawo budowlane",
+        aliases=[
+            "prawo budowlane",
+            "pozwolenie na budowę", "pozwolenie na budowe",
+            "zgłoszenie budowy", "zgloszenie budowy",
+            "roboty budowlane",
+            "nadzór budowlany", "nadzor budowlany",
+            "pinb", "winb",
+            "samowola", "samowola budowlana",
+            "legalizacja", "opłata legalizacyjna", "oplata legalizacyjna",
+            "rozbiórka", "rozbiorka",
+            "pozwolenie na użytkowanie", "pozwolenie na uzytkowanie",
+            "zakończenie budowy", "zakonczenie budowy",
+            "zmiana sposobu użytkowania", "zmiana sposobu uzytkowania",
+            "kierownik budowy", "dziennik budowy",
+            "katastrofa budowlana",
+        ],
+        priority=90
+    ),
 ]
 
-def _norm(text: str) -> str:
-    """Prosta normalizacja tekstu."""
-    return text.lower().strip()
 
 def route_act_names(query: str, max_acts: int = 2) -> List[str]:
     """
-    Analizuje zapytanie i zwraca listę nazw aktów prawnych,
-    które najbardziej pasują do tematu.
+    Zwraca listę nazw aktów (act_name) najlepiej pasujących do zapytania.
+    Działa deterministycznie, minimalizuje false-positive na krótkich aliasach.
     """
-    q = _norm(query)
-    scores = []
+    q = (query or "").lower().strip()
+    scores = []  # (score, act_name)
 
     for act in ACTS:
         score = 0
         for alias in act.aliases:
-            # Sprawdzamy czy alias występuje w zapytaniu
-            if alias in q:
-                # Dłuższe aliasy są zazwyczaj bardziej precyzyjne, więc punktujemy je wyżej
-                score += 10 + len(alias)
-        
-        if score > 0:
-            scores.append((score + act.priority, act.act_name))
+            if not alias:
+                continue
 
-    # Sortujemy od najlepszego dopasowania
+            # krótkie aliasy (akronimy) -> dopasowanie na granicach słów
+            if len(alias) <= 4:
+                if re.search(rf"\b{re.escape(alias)}\b", q):
+                    score += 15
+            else:
+                if alias in q:
+                    # dłuższe frazy są bardziej precyzyjne
+                    score += 8 + (len(alias) // 3)
+
+        if score > 0:
+            score += act.priority / 10
+            scores.append((score, act.act_name))
+
     scores.sort(key=lambda x: x[0], reverse=True)
 
-    # Zwracamy top N wyników
-    unique_acts = []
+    # unikalne akty w kolejności najlepszych dopasowań
+    out: List[str] = []
     seen = set()
     for _, name in scores:
         if name not in seen:
-            unique_acts.append(name)
+            out.append(name)
             seen.add(name)
-    
-    if ("rodo" in q) or ("gdpr" in q) or ("2016/679" in q):
-        # dołóż GDPR
-        if "Rodo ue" not in unique_acts:
-            unique_acts.insert(0, "Rodo ue")
-        # dołóż ustawę krajową
-        if "Rodo" not in unique_acts:
-            unique_acts.append("Rodo")
-    
-    return unique_acts[:max_acts]
+
+    # lekkie dopalenie RODO/GDPR: jeśli padło "rodo" w pytaniu, często warto mieć GDPR w top
+    if "rodo" in q or "gdpr" in q or "2016/679" in q:
+        if "Rodo ue" not in out:
+            out.insert(0, "Rodo ue")
+
+    return out[:max_acts]

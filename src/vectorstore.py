@@ -41,15 +41,22 @@ def _sanitize_metadata(meta: dict) -> dict:
     return clean
 
 def _list_existing_sources(db: Chroma) -> Set[str]:
+    """Zwraca zbiór nazw plików (source), które są już w bazie."""
     try:
+        # Pobieramy tylko metadane
         raw = db.get(include=["metadatas"])
         metas = raw.get("metadatas") or []
-        return {
-            m.get("source")
-            for m in metas
-            if isinstance(m, dict) and m.get("source")
-        }
-    except Exception:
+        
+        sources = set()
+        for m in metas:
+            if isinstance(m, dict) and m.get("source"):
+                # Normalizujemy nazwę źródła (bierzemy samą nazwę pliku, bez ścieżki)
+                src = os.path.basename(m.get("source"))
+                sources.add(src)
+        
+        return sources
+    except Exception as e:
+        print(f"⚠️ Błąd odczytu źródeł z bazy: {e}")
         return set()
 
 def _clean_act_name(raw_source: str) -> str:
@@ -144,61 +151,72 @@ def _load_json_files(docs_path: str, filenames: List[str]) -> List[Document]:
     return documents
 
 # ============================================================
-#  MAIN BUILDER
+#  MAIN BUILDER (Poprawiona logika inkrementalna)
 # ============================================================
 
 def build_vector_store(embeddings) -> Tuple[Chroma, Any]:
+    print(f"\n📂 Inicjalizacja ChromaDB w: '{DB_PATH}'")
+    
     db: Optional[Chroma] = None
     existing_sources: Set[str] = set()
 
+    # 1. Sprawdź czy baza istnieje i pobierz listę źródeł
     if os.path.exists(DB_PATH) and os.listdir(DB_PATH):
-        print(f"✅ Wykryto istniejącą bazę w '{DB_PATH}'.")
-        db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
-        existing_sources = _list_existing_sources(db)
+        try:
+            db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
+            existing_sources = _list_existing_sources(db)
+            print(f"✅ Baza załadowana. Znaleziono {len(existing_sources)} źródeł.")
+        except Exception as e:
+            print(f"❌ Błąd ładowania bazy: {e}. Tworzę nową.")
+            db = None
     else:
-        print("⚡ Tworzę nową, pustą bazę Chroma.")
+        print("⚡ Tworzę nową, pustą bazę.")
 
-    # Skanowanie
-    all_files = [f for f in os.listdir(DOCS_PATH) if f.lower().endswith((".json", ".jsonl"))]
-    new_files = [f for f in all_files if f not in existing_sources]
+    if db is None:
+        db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 
-    print("\n📊 STATUS BAZY:")
-    print(f" - Pliki w bazie: {len(existing_sources)}")
-    print(f" - Do dodania: {len(new_files)}")
-
-    if not new_files:
-        print("✅ Baza jest aktualna.")
-        if db is None: db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
-        return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})
-
-    # Ładowanie
-    print(f"\n🚀 Rozpoczynam procesowanie {len(new_files)} nowych plików...")
-    all_docs = _load_json_files(DOCS_PATH, new_files)
+    # 2. Skanowanie plików na dysku
+    all_files_on_disk = [f for f in os.listdir(DOCS_PATH) if f.lower().endswith((".json", ".jsonl"))]
     
-    if not all_docs:
-        print("⚠️ Brak dokumentów.")
-        if db is None: db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
+    # 3. Wykrywanie nowych plików
+    # Porównujemy nazwy plików. Jeśli 'ppsa.jsonl' jest w existing_sources, to go pomijamy.
+    new_files = [f for f in all_files_on_disk if f not in existing_sources]
+
+    print("\n📊 STATUS:")
+    print(f" - Pliki na dysku: {len(all_files_on_disk)}")
+    print(f" - Pliki w bazie:  {len(existing_sources)}")
+    print(f" - Do dodania:     {len(new_files)} -> {new_files}")
+
+    # 4. Jeśli brak nowości -> Koniec
+    if not new_files:
+        print("✅ Baza jest aktualna. Pomijam indeksowanie.")
         return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})
 
-    # Chunking
+    # 5. Ładowanie TYLKO nowych plików
+    print(f"\n🚀 Przetwarzanie {len(new_files)} nowych plików...")
+    new_docs = _load_json_files(DOCS_PATH, new_files)
+    
+    if not new_docs:
+        print("⚠️ Pliki są puste lub uszkodzone.")
+        return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})
+
+    # 6. Chunking (Tylko dla nowych)
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
         separators=["\n\n", "\n", " ", ""],
     )
-    final_chunks = splitter.split_documents(all_docs)
-    print(f"✂️  Ostatecznie: {len(final_chunks)} chunków do zapisu.")
+    final_chunks = splitter.split_documents(new_docs)
+    print(f"✂️  Wygenerowano {len(final_chunks)} nowych chunków.")
 
-    # Zapis
-    if db is None:
-        db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
-
+    # 7. Zapis (Tylko nowe chunki)
     total_added = 0
-    print("💾 Zapisywanie do bazy wektorowej...")
+    print("💾 Dopisuję do bazy wektorowej...")
+    
     for batch in _batched(final_chunks, MAX_BATCH):
         db.add_documents(batch)
         total_added += len(batch)
-        print(f"   → Zapisano {total_added}/{len(final_chunks)}")
+        print(f"   → Zapisano partię {total_added}/{len(final_chunks)}")
 
-    print("✅ Baza zaktualizowana.")
+    print("✅ Aktualizacja zakończona pomyślnie.")
     return db, db.as_retriever(search_kwargs={"k": RETRIEVER_K})

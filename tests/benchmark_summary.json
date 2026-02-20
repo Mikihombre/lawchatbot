@@ -1,0 +1,9 @@
+{
+  "n": 30,
+  "judge_model": "gemma3:4b",
+  "legal_accuracy_avg": 0.35,
+  "citation_accuracy": 0.5666666666666667,
+  "hallucination_rate": 0.23333333333333334,
+  "out_of_scope_rate": 0.0,
+  "elapsed_s": 68.6
+}
